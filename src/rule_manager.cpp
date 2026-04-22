@@ -219,6 +219,14 @@ bool RuleManager::deleteRule(uint32_t id) {
     return true;
 }
 
+void RuleManager::_deleteRuleFile(uint32_t id) const {
+    String path = _rulePath(id);
+    if (LittleFS.exists(path)) {
+        LittleFS.remove(path);
+        Serial.printf(RULE_TAG " _deleteRuleFile: removed %s\n", path.c_str());
+    }
+}
+
 bool RuleManager::setEnabled(uint32_t id, bool en) {
     RuleEntry rule;
     if (!_loadRule(id, rule)) return false;

@@ -849,3 +849,50 @@ NetMonConfig NetMonitor::loadConfig() const {
     f.close();
     return cfg;
 }
+// ─────────────────────────────────────────────────────────────
+//  deviceJson — return JSON object for a single device by MAC
+String NetMonitor::deviceJson(const String& mac) const {
+    for (const auto& d : _devices) {
+        if (d.mac.equalsIgnoreCase(mac)) {
+            JsonDocument doc;
+            doc["mac"]          = d.mac;
+            doc["ip"]           = d.ip;
+            doc["hostname"]     = d.hostname;
+            doc["vendor"]       = d.vendor;
+            doc["rssi"]         = d.rssi;
+            doc["online"]       = d.online;
+            doc["blocked"]      = d.blocked;
+            doc["firstSeen"]    = d.firstSeen;
+            doc["lastSeen"]     = d.lastSeen;
+            doc["txBytes"]      = d.txBytes;
+            doc["rxBytes"]      = d.rxBytes;
+            doc["packetCount"]  = d.packetCount;
+            doc["isNew"]        = d.isNew;
+            String out; serializeJson(doc, out);
+            return out;
+        }
+    }
+    return "{}";
+}
+
+// ─────────────────────────────────────────────────────────────
+//  _markDeviceOffline — mark device as offline by MAC
+bool NetMonitor::_markDeviceOffline(const String& mac) {
+    for (auto& d : _devices) {
+        if (d.mac.equalsIgnoreCase(mac)) {
+            if (d.online) {
+                d.online  = false;
+                d.lastSeen = millis();
+                _addAlert(AlertType::DEVICE_OFFLINE, AlertSeverity::INFO,
+                          "Device offline: " + d.ip + " " + d.hostname, d.mac);
+                Serial.printf("[NetMon] Device offline: %s %s\n",
+                              d.mac.c_str(), d.ip.c_str());
+                return true;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
+

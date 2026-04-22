@@ -2,6 +2,7 @@
 //  log_rotation.cpp  –  Batch 4: Log Rotation + CSV Export
 // ============================================================
 #include "log_rotation.h"
+#include <SD.h>
 #include "scheduler.h"
 #include "sd_manager.h"
 #include <ctime>
@@ -56,6 +57,31 @@ bool LogRotationManager::rotate() {
 
     // Clear in-memory audit log
     auditMgr.clear();
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  _archiveToCsv — write CSV copy of current audit log to SD
+bool LogRotationManager::_archiveToCsv() const {
+    if (!sdMgr.isAvailable()) return false;
+    time_t now; time(&now);
+    struct tm tmbuf;
+    struct tm* t = localtime_r(&now, &tmbuf);
+    char today[12];
+    snprintf(today, sizeof(today), "%04d-%02d-%02d",
+             t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+    String csvPath = String("/logs/audit_") + today + ".csv";
+    String csv = auditToCsv(-1, AUDIT_MAX_ENTRIES);
+    if (csv.isEmpty()) return false;
+    File f = SD.open(csvPath, FILE_WRITE);
+    if (!f) {
+        Serial.printf(LOG_ROT_TAG " _archiveToCsv: cannot open %s\n", csvPath.c_str());
+        return false;
+    }
+    f.print(csv);
+    f.close();
+    Serial.printf(LOG_ROT_TAG " CSV archive written: %s (%u bytes)\n",
+                  csvPath.c_str(), (unsigned)csv.length());
     return true;
 }
 
